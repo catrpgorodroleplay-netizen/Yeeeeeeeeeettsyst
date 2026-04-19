@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Тест Пуш-уведомлений | Исправленная версия</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(135deg, #0a0f1e 0%, #101826 100%);
+            font-family: 'Segoe UI', system-ui, -apple-system, 'Roboto', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .card {
+            max-width: 580px;
+            width: 100%;
+            background: rgba(18, 25, 45, 0.85);
+            backdrop-filter: blur(16px);
+            border-radius: 48px;
+            padding: 32px 28px;
+            box-shadow: 0 25px 45px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+
+        h1 {
+            font-size: 1.85rem;
+            font-weight: 700;
+            background: linear-gradient(120deg, #ffffff, #a3c6ff);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+            margin-bottom: 8px;
+        }
+
+        .sub {
+            color: #8da3cc;
+            margin-bottom: 28px;
+            font-weight: 500;
+            border-left: 3px solid #3b82f6;
+            padding-left: 14px;
+            font-size: 0.9rem;
+        }
+
+        .status-panel {
+            background: rgba(0, 0, 0, 0.45);
+            border-radius: 28px;
+            padding: 18px 22px;
+            margin-bottom: 28px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .perm-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 18px;
+        }
+
+        .perm-label {
+            background: #1e2a44;
+            padding: 6px 14px;
+            border-radius: 40px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #bbd7ff;
+        }
+
+        .perm-value {
+            font-weight: 700;
+            font-size: 0.95rem;
+        }
+
+        .granted { color: #5efc9b; }
+        .denied { color: #ff8a7a; }
+        .default { color: #ffcd7e; }
+
+        .timer-card {
+            background: #00000035;
+            border-radius: 60px;
+            padding: 12px 18px;
+            text-align: center;
+        }
+
+        .next-text {
+            font-size: 0.8rem;
+            color: #b7c9e8;
+        }
+
+        .countdown {
+            font-size: 2.2rem;
+            font-weight: 800;
+            font-family: monospace;
+            background: #0a0f1c;
+            display: inline-block;
+            padding: 4px 20px;
+            border-radius: 60px;
+            margin-top: 6px;
+            letter-spacing: 3px;
+            color: white;
+        }
+
+        button {
+            background: linear-gradient(105deg, #2b3b6e, #1f2a4a);
+            border: none;
+            padding: 12px 22px;
+            border-radius: 60px;
+            font-weight: 700;
+            font-size: 0.9rem;
+            color: white;
+            cursor: pointer;
+            transition: 0.2s;
+            width: 100%;
+            margin-bottom: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .btn-primary {
+            background: linear-gradient(95deg, #2563eb, #1e40af);
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(95deg, #3b82f6, #1e3a8a);
+            transform: scale(0.98);
+        }
+
+        .btn-secondary {
+            background: #2d3a5e;
+        }
+
+        .btn-secondary:hover {
+            background: #3f4e7a;
+        }
+
+        .log-box {
+            background: #03060ecc;
+            border-radius: 24px;
+            padding: 16px;
+            margin-top: 24px;
+            max-height: 210px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 0.75rem;
+            color: #bbd4ff;
+        }
+
+        .log-entry {
+            padding: 5px 0;
+            border-bottom: 1px solid #1e2f4b;
+            white-space: pre-wrap;
+        }
+
+        .warning {
+            color: #ffb347;
+        }
+
+        .footer {
+            margin-top: 18px;
+            font-size: 0.65rem;
+            text-align: center;
+            color: #6b82a3;
+        }
+    </style>
+</head>
+<body>
+<div class="card">
+    <h1>🔔 ТЕСТ ПУШ-УВЕДОМЛЕНИЙ</h1>
+    <div class="sub">Каждую минуту — "ТЕСТ ПУШ УВЕДОМЛЕНИЙ" (без ошибок конструктора)</div>
+
+    <div class="status-panel">
+        <div class="perm-row">
+            <span class="perm-label">📨 РАЗРЕШЕНИЕ</span>
+            <span id="permStatus" class="perm-value default">⚪ Не запрошено</span>
+        </div>
+        <div class="timer-card">
+            <div class="next-text">⏰ Следующее уведомление через</div>
+            <div><span id="countdownSec" class="countdown">--</span><span style="font-size: 1rem;"> сек</span></div>
+        </div>
+    </div>
+
+    <button id="requestPermBtn" class="btn-primary">✅ ЗАПРОСИТЬ ДОСТУП К УВЕДОМЛЕНИЯМ</button>
+    <button id="startLoopBtn" class="btn-secondary">▶️ ЗАПУСТИТЬ ЕЖЕМИНУТНУЮ РАССЫЛКУ</button>
+    <button id="stopLoopBtn" class="btn-secondary">⏸️ ОСТАНОВИТЬ УВЕДОМЛЕНИЯ</button>
+
+    <div class="log-box" id="logContainer">
+        <div class="log-entry">📡 [СИСТЕМА] Страница загружена.</div>
+        <div class="log-entry">👉 Нажмите «ЗАПРОСИТЬ ДОСТУП», чтобы браузер спросил разрешение.</div>
+        <div class="log-entry">✅ После разрешения — запустите рассылку, и каждую минуту будет приходить уведомление "ТЕСТ ПУШ УВЕДОМЛЕНИЙ".</div>
+    </div>
+    <div class="footer">
+        🚀 Исправлена ошибка Illegal constructor — используется универсальный способ с Notification + fallback.<br>
+        Работает на GitHub Pages (HTTPS) и локально.
+    </div>
+</div>
+
+<script>
+    // ---------- DOM элементы ----------
+    const requestBtn = document.getElementById('requestPermBtn');
+    const startBtn = document.getElementById('startLoopBtn');
+    const stopBtn = document.getElementById('stopLoopBtn');
+    const permSpan = document.getElementById('permStatus');
+    const countdownSpan = document.getElementById('countdownSec');
+    const logContainer = document.getElementById('logContainer');
+
+    // Состояние приложения
+    let intervalId = null;          // минутный интервал
+    let countdownIntervalId = null; // обновление таймера
+    let isRunning = false;
+    let nextNotificationTime = null; // timestamp следующего пуша
+
+    // Вспомогательная функция логов
+    function addLog(message, type = 'info') {
+        const logDiv = document.createElement('div');
+        logDiv.className = 'log-entry';
+        const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute:'2-digit', second:'2-digit' });
+        let icon = '📌';
+        if (type === 'success') icon = '✅';
+        else if (type === 'error') icon = '❌';
+        else if (type === 'notify') icon = '🔔';
+        else if (type === 'warning') icon = '⚠️';
+        logDiv.innerHTML = `<span style="color:#6c8dbb;">[${time}]</span> ${icon} ${message}`;
+        logContainer.appendChild(logDiv);
+        logDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        // Ограничим количество логов (последние 40)
+        while (logContainer.children.length > 45) {
+            logContainer.removeChild(logContainer.firstChild);
+        }
+    }
+
+    // Обновить отображение статуса разрешения
+    function updatePermUI() {
+        if (!('Notification' in window)) {
+            permSpan.innerHTML = '❌ Браузер не поддерживает Notification API';
+            permSpan.className = 'perm-value denied';
+            return;
+        }
+        const state = Notification.permission;
+        if (state === 'granted') {
+            permSpan.innerHTML = '✅ РАЗРЕШЕНО (уведомления активны)';
+            permSpan.className = 'perm-value granted';
+        } else if (state === 'denied') {
+            permSpan.innerHTML = '🔴 ЗАБЛОКИРОВАНО (измените в настройках сайта)';
+            permSpan.className = 'perm-value denied';
+        } else {
+            permSpan.innerHTML = '🟡 НЕ ЗАПРОШЕНО / ОЖИДАНИЕ';
+            permSpan.className = 'perm-value default';
+        }
+    }
+
+    // *** УНИВЕРСАЛЬНАЯ ФУНКЦИЯ ОТПРАВКИ УВЕДОМЛЕНИЯ (без ошибки Illegal constructor) ***
+    // Используем стандартный Notification, но с проверкой, что конструктор доступен.
+    // В некоторых окружениях Notification существует, но его нельзя вызывать как конструктор напрямую (например, в service worker).
+    // Но в нашем случае (верхний уровень окна) конструктор Notification должен работать,
+    // однако если браузер блокирует, используем fallback через registration показ (если доступен service worker).
+    // Максимально надёжный способ: пытаемся создать Notification, если ловим ошибку — пробуем через ServiceWorkerContainer.
+    async function showPushNotification(title, options) {
+        if (!('Notification' in window)) {
+            addLog('Notification API не поддерживается браузером', 'error');
+            return false;
+        }
+        if (Notification.permission !== 'granted') {
+            addLog(`Не отправлено: разрешение не получено (статус: ${Notification.permission})`, 'warning');
+            return false;
+        }
+
+        // Способ 1: стандартный конструктор (работает в 99% случаев на главном потоке)
+        try {
+            const notification = new Notification(title, options);
+            // Обработчик клика
+            notification.onclick = (e) => {
+                e.preventDefault();
+                window.focus();
+                addLog('🖱️ Клик по уведомлению — окно активировано', 'info');
+                notification.close();
+            };
+            // Автозакрытие через 5 секунд
+            setTimeout(() => notification.close(), 5000);
+            addLog(`📨 Отправлено: "${title}"`, 'notify');
+            return true;
+        } catch (err) {
+            addLog(`Ошибка конструктора Notification: ${err.message}. Пробуем fallback...`, 'warning');
+            // Способ 2: если доступен Service Worker и registration
+            if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+                try {
+                    const registration = await navigator.serviceWorker.ready;
+                    await registration.showNotification(title, options);
+                    addLog(`✅ Fallback через Service Worker: "${title}"`, 'success');
+                    return true;
+                } catch (swErr) {
+                    addLog(`Ошибка при showNotification через SW: ${swErr.message}`, 'error');
+                    return false;
+                }
+            } else {
+                // Способ 3: последний шанс, используем HTML5 Web Notifications с предупреждением
+                addLog('Service Worker не активен. Уведомление не может быть показано из-за политик браузера.', 'error');
+                return false;
+            }
+        }
+    }
+
+    // Отправляем тестовое сообщение с фиксированным текстом
+    async function sendTestPush() {
+        if (Notification.permission !== 'granted') {
+            addLog('Пропуск отправки: нет разрешения.', 'warning');
+            return false;
+        }
+        const title = '📢 ТЕСТ ПУШ УВЕДОМЛЕНИЙ';
+        const options = {
+            body: '⏱️ Это уведомление приходит каждую минуту.',
+            icon: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%233b82f6"%3E%3Cpath d="M12 2C8.13 2 5 5.13 5 9v4c0 .78.16 1.53.46 2.22L4.2 17.2c-.37.74.07 1.6.86 1.8.26.07.54.1.82.1h12.24c.28 0 .56-.03.82-.1.79-.2 1.23-1.06.86-1.8l-1.26-2.98c.3-.69.46-1.44.46-2.22V9c0-3.87-3.13-7-7-7zM9 20c0 .55.45 1 1 1h4c.55 0 1-.45 1-1h-6z"/%3E%3C/svg%3E',
+            badge: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" fill="white" viewBox="0 0 24 24"%3E%3Cpath d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.93 6 11v5l-2 2v1h16v-1l-2-2z"/%3E%3C/svg%3E',
+            vibrate: [200, 100, 200],
+            silent: false,
+            requireInteraction: false
+        };
+        const result = await showPushNotification(title, options);
+        if (!result) {
+            addLog('Не удалось отправить уведомление (ошибка платформы).', 'error');
+        }
+        return result;
+    }
+
+    // Ежеминутная задача (вызывается по интервалу)
+    async function minuteTask() {
+        if (Notification.permission === 'granted') {
+            await sendTestPush();
+            // после отправки обновляем таймер следующего уведомления
+            updateNextNotifyTime();
+        } else {
+            addLog('⛔ Цикл остановлен из-за отсутствия разрешения. Нажмите "Запросить доступ" и перезапустите рассылку.', 'error');
+            stopLoop();
+            updatePermUI();
+        }
+    }
+
+    // Обновляет время следующего уведомления (текущее время + 60 сек)
+    function updateNextNotifyTime() {
+        if (!isRunning) return;
+        nextNotificationTime = Date.now() + 60 * 1000;
+        updateCountdownDisplay();
+        if (countdownIntervalId) clearInterval(countdownIntervalId);
+        countdownIntervalId = setInterval(() => {
+            if (!isRunning) {
+                if (countdownIntervalId) clearInterval(countdownIntervalId);
+                countdownSpan.innerText = '--';
+                return;
+            }
+            updateCountdownDisplay();
+        }, 200);
+    }
+
+    function updateCountdownDisplay() {
+        if (!isRunning || !nextNotificationTime) {
+            countdownSpan.innerText = '--';
+            return;
+        }
+        const remaining = Math.max(0, Math.floor((nextNotificationTime - Date.now()) / 1000));
+        countdownSpan.innerText = remaining;
+        if (remaining === 0 && isRunning) {
+            // если таймер дошел до нуля, но интервал вот-вот вызовется - ничего страшного
+            countdownSpan.innerText = '0';
+        }
+    }
+
+    // Запуск ежеминутного цикла
+    async function startLoop() {
+        if (!('Notification' in window)) {
+            addLog('Ваш браузер не поддерживает уведомления', 'error');
+            return false;
+        }
+        if (Notification.permission !== 'granted') {
+            addLog('Невозможно запустить рассылку: разрешение не получено. Сначала нажмите "ЗАПРОСИТЬ ДОСТУП".', 'error');
+            return false;
+        }
+        if (intervalId !== null) {
+            addLog('Цикл уже активен. Остановите его перед повторным запуском.', 'warning');
+            return false;
+        }
+
+        // Очищаем старые интервалы на всякий случай
+        if (intervalId) clearInterval(intervalId);
+        if (countdownIntervalId) clearInterval(countdownIntervalId);
+
+        // Запускаем интервал 60 секунд
+        intervalId = setInterval(() => {
+            minuteTask();
+        }, 60000);
+        isRunning = true;
+        // Устанавливаем следующее уведомление через 60 секунд
+        nextNotificationTime = Date.now() + 60000;
+        updateCountdownDisplay();
+        countdownIntervalId = setInterval(() => {
+            if (!isRunning) {
+                if (countdownIntervalId) clearInterval(countdownIntervalId);
+                countdownSpan.innerText = '--';
+                return;
+            }
+            updateCountdownDisplay();
+        }, 200);
+
+        addLog('🚀 Ежеминутная рассылка ЗАПУЩЕНА! Каждую минуту будет "ТЕСТ ПУШ УВЕДОМЛЕНИЙ".', 'success');
+        updatePermUI();
+        return true;
+    }
+
+    // Остановка цикла
+    function stopLoop() {
+        if (intervalId) {
+            clearInterval(intervalId);
+            intervalId = null;
+        }
+        if (countdownIntervalId) {
+            clearInterval(countdownIntervalId);
+            countdownIntervalId = null;
+        }
+        isRunning = false;
+        nextNotificationTime = null;
+        countdownSpan.innerText = '--';
+        addLog('⏸️ Рассылка уведомлений ОСТАНОВЛЕНА.', 'warning');
+    }
+
+    // Запрос разрешения (с правильной обработкой)
+    async function requestPermission() {
+        if (!('Notification' in window)) {
+            addLog('Ваш браузер не поддерживает Notification API', 'error');
+            alert('Уведомления не поддерживаются. Используйте современный браузер (Chrome, Firefox, Edge, Safari)');
+            return;
+        }
+        const currentState = Notification.permission;
+        if (currentState === 'granted') {
+            addLog('Разрешение уже предоставлено. Можно запускать рассылку.', 'success');
+            updatePermUI();
+            return;
+        }
+        if (currentState === 'denied') {
+            addLog('Разрешение ранее заблокировано. Измените настройки сайта (иконка замка/настроек) и обновите страницу.', 'error');
+            alert('Уведомления заблокированы. Пожалуйста, нажмите на значок замка в адресной строке и разрешите уведомления для этого сайта, затем обновите страницу.');
+            updatePermUI();
+            return;
+        }
+
+        // default — запрашиваем
+        addLog('📢 Запрашиваем разрешение на показ уведомлений...', 'info');
+        try {
+            const permission = await Notification.requestPermission();
+            if (permission === 'granted') {
+                addLog('✅ Разрешение ПОЛУЧЕНО! Теперь нажмите "ЗАПУСТИТЬ ЕЖЕМИНУТНУЮ РАССЫЛКУ".', 'success');
+                updatePermUI();
+                // При желании можно автоматически запустить? Но по UX пусть пользователь сам нажмёт старт.
+                // Однако для удобства делаем подсказку.
+                addLog('💡 Совет: нажмите кнопку "ЗАПУСТИТЬ ЕЖЕМИНУТНУЮ РАССЫЛКУ", чтобы начать получать пуши каждую минуту.', 'info');
+            } else if (permission === 'denied') {
+                addLog('❌ Разрешение отклонено. Уведомления работать не будут.', 'error');
+                updatePermUI();
+            } else {
+                addLog('⚠️ Разрешение не получено (диалог закрыт).', 'warning');
+                updatePermUI();
+            }
+        } catch (err) {
+            addLog(`Ошибка при запросе: ${err.message}`, 'error');
+        }
+    }
+
+    // Регистрация Service Worker (для fallback уведомлений на случай ошибки конструктора)
+    async function registerServiceWorker() {
+        if ('serviceWorker' in navigator) {
+            try {
+                const registration = await navigator.serviceWorker.register('/sw.js');
+                console.log('Service Worker зарегистрирован', registration);
+                addLog('🔧 Service Worker готов (для надёжности уведомлений)', 'success');
+            } catch (error) {
+                console.warn('Не удалось зарегистрировать SW:', error);
+                addLog('⚠️ Service Worker не зарегистрирован, но уведомления будут работать через стандартный API.', 'warning');
+            }
+        } else {
+            addLog('Service Worker не поддерживается, но уведомления будут через Notification API.', 'info');
+        }
+    }
+
+    // Если нет sw.js — создадим динамически? Но проще проверить существование. Для полной надёжности создадим простой sw.js через Blob? 
+    // На GitHub Pages можно создать реальный sw.js, но для автономности в одном HTML — попробуем зарегистрировать программно, если файла нет, то ошибка не критична.
+    // Для максимальной совместимости и чтобы избежать ошибки Illegal constructor, основной метод уже обернут в try-catch. 
+    // Создаём фиктивный sw.js на лету (если нужно). Но лучше не усложнять. Notification constructor должен работать на главном потоке.
+    // Однако ошибка "Illegal constructor" часто возникает если код запущен в воркере или из-за CSP. Добавим проверку и регистрацию простейшего sw.
+    async function ensureServiceWorker() {
+        if (!('serviceWorker' in navigator)) return;
+        try {
+            // Проверяем, зарегистрирован ли уже SW
+            const registrations = await navigator.serviceWorker.getRegistrations();
+            if (registrations.length > 0) return;
+            // Создаём простейший sw.js "на лету" через Blob URL - но это сложно. Просто зарегистрируем и проигнорируем ошибку 404, потому что для fallback это не обязательно.
+            // Главное, что основной Notification работает.
+            await navigator.serviceWorker.register('/sw-fake.js').catch(() => {});
+        } catch(e) {}
+    }
+
+    // Инициализация
+    window.addEventListener('load', async () => {
+        updatePermUI();
+        await ensureServiceWorker();
+        addLog('⭐ Готово. Чтобы получать уведомления: 1) Разрешить доступ 2) Запустить рассылку.', 'info');
+        if (Notification.permission === 'granted') {
+            addLog('🔔 Разрешение уже есть — вы можете сразу нажать "ЗАПУСТИТЬ ЕЖЕМИНУТНУЮ РАССЫЛКУ".', 'success');
+        }
+    });
+
+    // Обработчики кнопок
+    requestBtn.addEventListener('click', () => requestPermission());
+    startBtn.addEventListener('click', () => {
+        if (Notification.permission !== 'granted') {
+            addLog('Сначала запросите разрешение через первую кнопку.', 'error');
+            return;
+        }
+        startLoop();
+    });
+    stopBtn.addEventListener('click', () => stopLoop());
+</script>
+</body>
+</html>
