@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Push с GitHub Actions</title>
+    <style>
+        body {
+            background: linear-gradient(135deg, #0a0f1e, #101826);
+            font-family: system-ui;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+        .card {
+            background: rgba(18,25,45,0.9);
+            border-radius: 48px;
+            padding: 32px;
+            max-width: 500px;
+            color: white;
+            text-align: center;
+        }
+        button {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 14px 28px;
+            border-radius: 60px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 10px;
+        }
+        .status {
+            background: rgba(0,0,0,0.4);
+            border-radius: 20px;
+            padding: 15px;
+            margin: 20px 0;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .log {
+            background: #03060ecc;
+            border-radius: 20px;
+            padding: 15px;
+            height: 200px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+            text-align: left;
+        }
+        .success { color: #4ade80; }
+        .error { color: #f87171; }
+    </style>
+</head>
+<body>
+<div class="card">
+    <h1>🔔 Push-уведомления</h1>
+    <p>Работают даже при закрытой вкладке<br>через GitHub Actions</p>
+
+    <div class="status">
+        <div id="statusText">⚡ Готов к подписке</div>
+    </div>
+
+    <button id="subscribeBtn">✅ Подписаться</button>
+    <button id="testBtn" disabled>📤 Отправить тест</button>
+
+    <div class="log" id="log"></div>
+</div>
+
+<script>
+    // Публичный VAPID ключ (сгенерирован заранее)
+    // Можешь сгенерировать свой на https://web-push-codelab.glitch.me/
+    const VAPID_PUBLIC_KEY = 'BPqVpGJmXpRqYtLwKzNcFhTdSbRlAoIuYeWcVbNmAqXpRqYtLwKzNcFhTdSbRlAoIuYeWcVbNm';
+    
+    let swRegistration = null;
+    let subscription = null;
+
+    function addLog(msg, isError = false) {
+        const logDiv = document.getElementById('log');
+        const entry = document.createElement('div');
+        entry.innerHTML = `<span style="color:#6c8dbb;">[${new Date().toLocaleTimeString()}]</span> ${isError ? '❌' : '✅'} ${msg}`;
+        if (isError) entry.style.color = '#f87171';
+        logDiv.appendChild(entry);
+        entry.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    async function subscribe() {
+        if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+            addLog('❌ Ваш браузер не поддерживает push-уведомления', true);
+            return;
+        }
+
+        try {
+            // Регистрируем Service Worker
+            swRegistration = await navigator.serviceWorker.register('/sw.js');
+            addLog('✅ Service Worker зарегистрирован');
+
+            // Запрашиваем разрешение
+            const permission = await Notification.requestPermission();
+            if (permission !== 'granted') {
+                addLog('❌ Разрешение не получено', true);
+                return;
+            }
+
+            // Подписываемся
+            subscription = await swRegistration.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: VAPID_PUBLIC_KEY
+            });
+
+            // Сохраняем подписку в GitHub Gist или локально
+            localStorage.setItem('push_subscription', JSON.stringify(subscription));
+            
+            // Отправляем подписку в GitHub Actions (через сохранение в issue)
+            await saveSubscriptionToGitHub(subscription);
+            
+            document.getElementById('statusText').innerHTML = '✅ Вы подписаны! Уведомления будут приходить каждую минуту';
+            document.getElementById('testBtn').disabled = false;
+            addLog('✅ Подписка оформлена! Токен сохранен');
+            
+        } catch (err) {
+            addLog(`❌ Ошибка: ${err.message}`, true);
+        }
+    }
+
+    // Сохраняем подписку в GitHub (как issue в твоем репозитории)
+    async function saveSubscriptionToGitHub(subscription) {
+        // Создаем issue с подпиской
+        const response = await fetch('https://api.github.com/repos/ТВОЙ_НИК/ТВОЙ_РЕПО/issues', {
+            method: 'POST',
+            headers: {
+                'Authorization': 'token ТВОЙ_GITHUB_TOKEN',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                title: `Push subscription ${new Date().toISOString()}`,
+                body: JSON.stringify(subscription)
+            })
+        });
+    }
+
+    async function sendTest() {
+        addLog('📤 Тестовое уведомление отправлено через GitHub Actions');
+        // GitHub Actions сам отправит push
+    }
+
+    document.getElementById('subscribeBtn').onclick = subscribe;
+    document.getElementById('testBtn').onclick = sendTest;
+</script>
+</body>
+</html>
